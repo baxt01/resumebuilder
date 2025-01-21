@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resume Analysis</title>
+    <title>Resume Analysis Tool</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
 </head>
 <body>
@@ -28,7 +28,7 @@
         <div id="results" class="mt-5" style="display: none;">
             <h2>Analysis Results</h2>
             <div id="keywordResults"></div>
-            <div id="formattingIssues"></div>
+            <div id="rewrittenResume"></div>
         </div>
     </div>
 
@@ -36,7 +36,7 @@
         const form = document.getElementById('analysisForm');
         const resultsDiv = document.getElementById('results');
         const keywordResultsDiv = document.getElementById('keywordResults');
-        const formattingIssuesDiv = document.getElementById('formattingIssues');
+        const rewrittenResumeDiv = document.getElementById('rewrittenResume');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -55,33 +55,16 @@
                 keywordResultsDiv.innerHTML = `
                     <h3>Keyword Matching</h3>
                     <p><strong>Matched Must-Have Keywords:</strong> ${keywordResults.matched_must_have.join(', ')}</p>
-                    <p><strong>Matched Nice-to-Have Keywords:</strong> ${keywordResults.matched_nice_to_have.join(', ')}</p>
-                    <p><strong>Total Score:</strong> ${keywordResults.total_score}%</p>
+                    <p><strong>Missing Must-Have Keywords:</strong> ${keywordResults.missing_must_have.join(', ')}</p>
+                    <p><strong>Score:</strong> ${keywordResults.total_score}%</p>
                 `;
 
-                // Display formatting issues
-                const formattingIssues = data.formatting_issues || [];
-                formattingIssuesDiv.innerHTML = `
-                    <h3>Formatting Issues</h3>
-                    <ul>${formattingIssues.map(issue => `<li>${issue}</li>`).join('')}</ul>
+                // Display rewritten resume
+                const rewrittenResume = data.rewritten_resume;
+                rewrittenResumeDiv.innerHTML = `
+                    <h3>Rewritten Resume Suggestions</h3>
+                    <pre style="background: #f8f9fa; padding: 10px;">${rewrittenResume}</pre>
                 `;
-
-                // Display readability score
-                const readabilityScore = data.readability_score;
-                formattingIssuesDiv.insertAdjacentHTML(
-                    'beforeend',
-                    `<p><strong>Readability Score:</strong> ${readabilityScore.toFixed(2)}</p>`
-                );
-
-                // Display custom tips
-                const tips = data.tips || [];
-                formattingIssuesDiv.insertAdjacentHTML(
-                    'beforeend',
-                    `
-                    <h3>Custom Tips</h3>
-                    <ul>${tips.map(tip => `<li>${tip}</li>`).join('')}</ul>
-                    `
-                );
 
                 resultsDiv.style.display = 'block';
             } else {
