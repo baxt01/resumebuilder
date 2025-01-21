@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify, render_template
 from docx import Document
 import PyPDF2
 import spacy
-from nltk.corpus import stopwords
 import textstat
 
 # Load spaCy model
@@ -12,33 +11,35 @@ nlp = spacy.load("en_core_web_sm")
 app = Flask(__name__)
 
 # Helper functions
-
 def analyse_resume(resume_text, job_description):
-    # Extract keywords (split by priority levels)
-    must_have_keywords = ["teamwork", "Python", "project management"]  # Example
-    nice_to_have_keywords = ["HTML", "CSS", "critical thinking"]  # Example
+    print(f"Job description: {job_description}")  # Debugging
+    print(f"Resume text: {resume_text[:200]}")  # Debug first 200 characters
+
+    # Extract single and multi-word keywords dynamically from the job description
+    job_doc = nlp(job_description)
+    single_word_keywords = [token.text.lower() for token in job_doc if token.is_alpha and not token.is_stop]
+    multi_word_keywords = [" ".join(chunk.text.lower().split()) for chunk in job_doc.noun_chunks]
+
+    # Combine all keywords
+    all_keywords = set(single_word_keywords + multi_word_keywords)
+
+    # Debug extracted keywords
+    print(f"Single-Word Keywords: {single_word_keywords}")
+    print(f"Multi-Word Keywords: {multi_word_keywords}")
+    print(f"All Keywords: {all_keywords}")
 
     # Check keyword matches
-    matched_must_have = [word for word in must_have_keywords if word.lower() in resume_text.lower()]
-    matched_nice_to_have = [word for word in nice_to_have_keywords if word.lower() in resume_text.lower()]
+    matched_keywords = [keyword for keyword in all_keywords if keyword in resume_text.lower()]
+    missing_keywords = [keyword for keyword in all_keywords if keyword not in resume_text.lower()]
 
     # Scoring
-    must_have_score = (len(matched_must_have) / len(must_have_keywords)) * 70  # 70% weight
-    nice_to_have_score = (len(matched_nice_to_have) / len(nice_to_have_keywords)) * 30  # 30% weight
+    match_score = (len(matched_keywords) / len(all_keywords)) * 100 if all_keywords else 0
 
-    total_score = must_have_score + nice_to_have_score
-
-    # Format response
     return {
-        "matched_must_have": matched_must_have,
-        "matched_nice_to_have": matched_nice_to_have,
-        "total_score": round(total_score, 2)
+        "matched_keywords": matched_keywords,
+        "missing_keywords": missing_keywords,
+        "total_score": round(match_score, 2)
     }
-
-def check_action_verbs(resume_text):
-    action_verbs = ["managed", "developed", "led", "implemented", "improved", "designed"]
-    matched_verbs = [verb for verb in action_verbs if verb.lower() in resume_text.lower()]
-    return matched_verbs
 
 def check_formatting_issues(resume_text):
     issues = []
@@ -51,28 +52,39 @@ def check_formatting_issues(resume_text):
     return issues
 
 def calculate_readability(resume_text):
-    readability_score = textstat.flesch_reading_ease(resume_text)
-    return readability_score
+    if not resume_text:
+        return "Not available"
+    return textstat.flesch_reading_ease(resume_text)
 
 def generate_custom_tips(missing_keywords, formatting_issues):
     tips = []
     if missing_keywords:
-        tips.append(f"Add these keywords: {', '.join(missing_keywords)}")
+        tips.append(f"Consider adding these keywords: {', '.join(missing_keywords)}")
     if formatting_issues:
         tips.extend(formatting_issues)
     if not tips:
         tips.append("Your resume is well-optimised!")
     return tips
 
-# Flask Routes
+def process_file(resume_file):
+    if resume_file.filename.endswith('.pdf'):
+        pdf_reader = PyPDF2.PdfReader(resume_file.stream)
+        resume_text = " ".join([page.extract_text() for page in pdf_reader.pages if page.extract_text()])
+    elif resume_file.filename.endswith('.docx'):
+        doc = Document(resume_file.stream)
+        resume_text = " ".join([para.text for para in doc.paragraphs])
+    else:
+        resume_text = ""
+    print(f"Extracted Resume Text: {resume_text[:200]}")  # Debugging first 200 characters
+    return resume_text
 
+# Flask Routes
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/analyse', methods=['POST'])
 def analyse():
-    # Retrieve resume and job description
     resume_file = request.files['resume']
     job_description = request.form['job_description']
 
@@ -81,31 +93,23 @@ def analyse():
 
     # Perform analysis
     keyword_results = analyse_resume(resume_text, job_description)
-    action_verbs = check_action_verbs(resume_text)
     formatting_issues = check_formatting_issues(resume_text)
     readability_score = calculate_readability(resume_text)
-    custom_tips = generate_custom_tips(keyword_results['matched_must_have'], formatting_issues)
+    custom_tips = generate_custom_tips(keyword_results["missing_keywords"], formatting_issues)
+
+    # Debugging response data
+    print(f"Keyword Results: {keyword_results}")
+    print(f"Formatting Issues: {formatting_issues}")
+    print(f"Readability Score: {readability_score}")
+    print(f"Custom Tips: {custom_tips}")
 
     # Return JSON response
     return jsonify({
         "keyword_results": keyword_results,
-        "matched_verbs": action_verbs,
         "formatting_issues": formatting_issues,
         "readability_score": readability_score,
-        "tips": custom_tips
+        "suggested_edits": custom_tips
     })
-
-def process_file(resume_file):
-    # Logic for extracting text from file (PDF or DOCX)
-    if resume_file.filename.endswith('.pdf'):
-        pdf_reader = PyPDF2.PdfReader(resume_file)
-        resume_text = " ".join([page.extract_text() for page in pdf_reader.pages])
-    elif resume_file.filename.endswith('.docx'):
-        doc = Document(resume_file)
-        resume_text = " ".join([para.text for para in doc.paragraphs])
-    else:
-        resume_text = ""
-    return resume_text
 
 # Run the app
 if __name__ == '__main__':
