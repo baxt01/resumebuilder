@@ -1,107 +1,112 @@
 from flask import Flask, request, jsonify, render_template
-import spacy
-import re
-from werkzeug.utils import secure_filename
-import os
 from docx import Document
 import PyPDF2
-import nltk
+import spacy
 from nltk.corpus import stopwords
+import textstat
 
-# Flask App Setup
-app = Flask(__name__)
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-# Load NLP Model (SpaCy)
+# Load spaCy model
 nlp = spacy.load("en_core_web_sm")
-nltk.download('stopwords')
-stop_words = set(stopwords.words('english'))
 
-# Utility Functions
-def extract_text_from_file(file_path):
-    """Extracts text from .docx or .pdf files."""
-    if file_path.endswith('.docx'):
-        doc = Document(file_path)
-        return " ".join([paragraph.text for paragraph in doc.paragraphs])
-    elif file_path.endswith('.pdf'):
-        text = ""
-        with open(file_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            for page in pdf_reader.pages:
-                text += page.extract_text()
-        return text
-    else:
-        raise ValueError("Unsupported file format. Please upload a .docx or .pdf file.")
+# Initialize Flask app
+app = Flask(__name__)
 
-def keyword_matching(job_description, resume_text):
-    """Matches keywords from job description to resume."""
-    job_doc = nlp(job_description.lower())
-    resume_doc = nlp(resume_text.lower())
+# Helper functions
 
-    job_keywords = set([token.text for token in job_doc if token.is_alpha and token.text not in stop_words])
-    resume_keywords = set([token.text for token in resume_doc if token.is_alpha and token.text not in stop_words])
+def analyse_resume(resume_text, job_description):
+    # Extract keywords (split by priority levels)
+    must_have_keywords = ["teamwork", "Python", "project management"]  # Example
+    nice_to_have_keywords = ["HTML", "CSS", "critical thinking"]  # Example
 
-    matched_keywords = job_keywords.intersection(resume_keywords)
-    missing_keywords = job_keywords.difference(resume_keywords)
+    # Check keyword matches
+    matched_must_have = [word for word in must_have_keywords if word.lower() in resume_text.lower()]
+    matched_nice_to_have = [word for word in nice_to_have_keywords if word.lower() in resume_text.lower()]
 
+    # Scoring
+    must_have_score = (len(matched_must_have) / len(must_have_keywords)) * 70  # 70% weight
+    nice_to_have_score = (len(matched_nice_to_have) / len(nice_to_have_keywords)) * 30  # 30% weight
+
+    total_score = must_have_score + nice_to_have_score
+
+    # Format response
     return {
-        "matched": list(matched_keywords),
-        "missing": list(missing_keywords),
-        "score": int(len(matched_keywords) / len(job_keywords) * 100) if job_keywords else 0
+        "matched_must_have": matched_must_have,
+        "matched_nice_to_have": matched_nice_to_have,
+        "total_score": round(total_score, 2)
     }
 
-def formatting_analysis(resume_text):
-    """Analyses resume formatting for ATS compatibility."""
+def check_action_verbs(resume_text):
+    action_verbs = ["managed", "developed", "led", "implemented", "improved", "designed"]
+    matched_verbs = [verb for verb in action_verbs if verb.lower() in resume_text.lower()]
+    return matched_verbs
+
+def check_formatting_issues(resume_text):
     issues = []
-
-    # Check for common ATS issues
-    if len(re.findall(r'[\u2022\u25E6\u25AA]', resume_text)) == 0:  # Bullet points
-        issues.append("No bullet points detected. Use standard bullets to highlight achievements.")
-
-    if len(re.findall(r'\[img\]|<img>', resume_text)) > 0:  # Images
-        issues.append("Images detected. Remove them as ATS systems cannot parse images.")
-
-    if len(re.findall(r'(\w+\s+){15,}', resume_text)) > 0:  # Long sentences
-        issues.append("Long sentences detected. Break them into shorter, concise points.")
-
+    if "table" in resume_text.lower():
+        issues.append("Contains tables that may not parse well.")
+    if "image" in resume_text.lower():
+        issues.append("Contains images which ATS systems cannot read.")
+    if len(resume_text.split("\n")) < 5:
+        issues.append("Too short; consider elaborating on experience.")
     return issues
 
+def calculate_readability(resume_text):
+    readability_score = textstat.flesch_reading_ease(resume_text)
+    return readability_score
+
+def generate_custom_tips(missing_keywords, formatting_issues):
+    tips = []
+    if missing_keywords:
+        tips.append(f"Add these keywords: {', '.join(missing_keywords)}")
+    if formatting_issues:
+        tips.extend(formatting_issues)
+    if not tips:
+        tips.append("Your resume is well-optimised!")
+    return tips
+
 # Flask Routes
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/analyse', methods=['POST'])
-def analyse_resume():
-    if 'resume' not in request.files or 'job_description' not in request.form:
-        return jsonify({"error": "Resume file and job description are required."}), 400
-
-    # File and job description handling
+def analyse():
+    # Retrieve resume and job description
     resume_file = request.files['resume']
     job_description = request.form['job_description']
 
-    if resume_file.filename == '':
-        return jsonify({"error": "No resume file selected."}), 400
-
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(resume_file.filename))
-    resume_file.save(file_path)
-
-    try:
-        resume_text = extract_text_from_file(file_path)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+    # Process resume file
+    resume_text = process_file(resume_file)
 
     # Perform analysis
-    keyword_results = keyword_matching(job_description, resume_text)
-    formatting_results = formatting_analysis(resume_text)
+    keyword_results = analyse_resume(resume_text, job_description)
+    action_verbs = check_action_verbs(resume_text)
+    formatting_issues = check_formatting_issues(resume_text)
+    readability_score = calculate_readability(resume_text)
+    custom_tips = generate_custom_tips(keyword_results['matched_must_have'], formatting_issues)
 
-    # Return results
+    # Return JSON response
     return jsonify({
         "keyword_results": keyword_results,
-        "formatting_issues": formatting_results
+        "matched_verbs": action_verbs,
+        "formatting_issues": formatting_issues,
+        "readability_score": readability_score,
+        "tips": custom_tips
     })
 
+def process_file(resume_file):
+    # Logic for extracting text from file (PDF or DOCX)
+    if resume_file.filename.endswith('.pdf'):
+        pdf_reader = PyPDF2.PdfReader(resume_file)
+        resume_text = " ".join([page.extract_text() for page in pdf_reader.pages])
+    elif resume_file.filename.endswith('.docx'):
+        doc = Document(resume_file)
+        resume_text = " ".join([para.text for para in doc.paragraphs])
+    else:
+        resume_text = ""
+    return resume_text
+
+# Run the app
 if __name__ == '__main__':
     app.run(debug=True)
