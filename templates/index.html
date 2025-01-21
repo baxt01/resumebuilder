@@ -39,55 +39,55 @@
         const formattingIssuesDiv = document.getElementById('formattingIssues');
 
         form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+            e.preventDefault();
 
-    const formData = new FormData(form);
-    const response = await fetch('/analyse', {
-        method: 'POST',
-        body: formData
-    });
+            const formData = new FormData(form);
+            const response = await fetch('/analyse', {
+                method: 'POST',
+                body: formData
+            });
 
-    if (response.ok) {
-        const data = await response.json();
+            if (response.ok) {
+                const data = await response.json();
 
-        // Display keyword results
-        keywordResultsDiv.innerHTML = `
-            <h3>Keyword Matching</h3>
-            <p><strong>Matched Must-Have Keywords:</strong> ${data.matched_must_have.join(', ')}</p>
-            <p><strong>Matched Nice-to-Have Keywords:</strong> ${data.matched_nice_to_have.join(', ')}</p>
-            <p><strong>Total ATS Score:</strong> ${data.total_score}%</p>
-        `;
+                // Display keyword results
+                const keywordResults = data.keyword_results;
+                keywordResultsDiv.innerHTML = `
+                    <h3>Keyword Matching</h3>
+                    <p><strong>Matched Must-Have Keywords:</strong> ${keywordResults.matched_must_have.join(', ')}</p>
+                    <p><strong>Matched Nice-to-Have Keywords:</strong> ${keywordResults.matched_nice_to_have.join(', ')}</p>
+                    <p><strong>Total Score:</strong> ${keywordResults.total_score}%</p>
+                `;
 
-        // Display action verbs
-        keywordResultsDiv.innerHTML += `
-            <h3>Action Verbs</h3>
-            <p><strong>Matched Action Verbs:</strong> ${data.matched_verbs.join(', ')}</p>
-        `;
+                // Display formatting issues
+                const formattingIssues = data.formatting_issues || [];
+                formattingIssuesDiv.innerHTML = `
+                    <h3>Formatting Issues</h3>
+                    <ul>${formattingIssues.map(issue => `<li>${issue}</li>`).join('')}</ul>
+                `;
 
-        // Display formatting issues
-        formattingIssuesDiv.innerHTML = `
-            <h3>Formatting Issues</h3>
-            <ul>${data.formatting_issues.map(issue => `<li>${issue}</li>`).join('')}</ul>
-        `;
+                // Display readability score
+                const readabilityScore = data.readability_score;
+                formattingIssuesDiv.insertAdjacentHTML(
+                    'beforeend',
+                    `<p><strong>Readability Score:</strong> ${readabilityScore.toFixed(2)}</p>`
+                );
 
-        // Display readability
-        formattingIssuesDiv.innerHTML += `
-            <h3>Readability Score</h3>
-            <p><strong>Flesch Reading Ease:</strong> ${data.readability_score}</p>
-        `;
+                // Display custom tips
+                const tips = data.tips || [];
+                formattingIssuesDiv.insertAdjacentHTML(
+                    'beforeend',
+                    `
+                    <h3>Custom Tips</h3>
+                    <ul>${tips.map(tip => `<li>${tip}</li>`).join('')}</ul>
+                    `
+                );
 
-        // Display tips
-        formattingIssuesDiv.innerHTML += `
-            <h3>Customisation Tips</h3>
-            <ul>${data.tips.map(tip => `<li>${tip}</li>`).join('')}</ul>
-        `;
-
-        resultsDiv.style.display = 'block';
-    } else {
-        alert('An error occurred while analysing the resume. Please try again.');
-    }
-});
-
+                resultsDiv.style.display = 'block';
+            } else {
+                alert('An error occurred while analysing the resume. Please try again.');
+            }
+        });
     </script>
 </body>
 </html>
