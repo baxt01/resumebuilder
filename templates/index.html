@@ -30,47 +30,48 @@
             <div id="keywordResults"></div>
             <div id="rewrittenResume"></div>
         </div>
-    </div>
-
-    <script>
-        const form = document.getElementById('analysisForm');
-        const resultsDiv = document.getElementById('results');
-        const keywordResultsDiv = document.getElementById('keywordResults');
-        const rewrittenResumeDiv = document.getElementById('rewrittenResume');
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const formData = new FormData(form);
-            const response = await fetch('/analyse', {
-                method: 'POST',
-                body: formData
+        
+        <script>
+            const form = document.getElementById('analysisForm');
+            const resultsDiv = document.getElementById('results');
+            const keywordResultsDiv = document.getElementById('keywordResults');
+            const rewrittenResumeDiv = document.getElementById('rewrittenResume');
+        
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+        
+                const formData = new FormData(form);
+                const response = await fetch('/analyse', {
+                    method: 'POST',
+                    body: formData
+                });
+        
+                if (response.ok) {
+                    const data = await response.json();
+        
+                    // Display keyword results
+                    const keywordResults = data.keyword_results;
+                    keywordResultsDiv.innerHTML = `
+                        <h3>Keyword Matching</h3>
+                        <p><strong>Matched Single-Word Keywords:</strong> ${keywordResults.matched_single_words.join(', ')}</p>
+                        <p><strong>Missing Single-Word Keywords:</strong> ${keywordResults.missing_single_words.join(', ')}</p>
+                        <p><strong>Matched Multi-Word Phrases:</strong> ${keywordResults.matched_multi_words.join(', ')}</p>
+                        <p><strong>Missing Multi-Word Phrases:</strong> ${keywordResults.missing_multi_words.join(', ')}</p>
+                        <p><strong>Score:</strong> ${keywordResults.total_score}%</p>
+                    `;
+        
+                    // Display rewritten resume
+                    const rewrittenResume = data.rewritten_resume;
+                    rewrittenResumeDiv.innerHTML = `
+                        <h3>Rewritten Resume Suggestions</h3>
+                        <pre style="background: #f8f9fa; padding: 10px;">${rewrittenResume}</pre>
+                    `;
+        
+                    resultsDiv.style.display = 'block';
+                } else {
+                    alert('An error occurred while analysing the resume. Please try again.');
+                }
             });
-
-            if (response.ok) {
-                const data = await response.json();
-
-                // Display keyword results
-                const keywordResults = data.keyword_results;
-                keywordResultsDiv.innerHTML = `
-                    <h3>Keyword Matching</h3>
-                    <p><strong>Matched Must-Have Keywords:</strong> ${keywordResults.matched_must_have.join(', ')}</p>
-                    <p><strong>Missing Must-Have Keywords:</strong> ${keywordResults.missing_must_have.join(', ')}</p>
-                    <p><strong>Score:</strong> ${keywordResults.total_score}%</p>
-                `;
-
-                // Display rewritten resume
-                const rewrittenResume = data.rewritten_resume;
-                rewrittenResumeDiv.innerHTML = `
-                    <h3>Rewritten Resume Suggestions</h3>
-                    <pre style="background: #f8f9fa; padding: 10px;">${rewrittenResume}</pre>
-                `;
-
-                resultsDiv.style.display = 'block';
-            } else {
-                alert('An error occurred while analysing the resume. Please try again.');
-            }
-        });
-    </script>
+        </script>        
 </body>
 </html>

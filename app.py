@@ -11,38 +11,53 @@ nlp = spacy.load("en_core_web_sm")
 app = Flask(__name__)
 
 # Helper functions
+def extract_keywords(job_description):
+    # Process job description with spaCy
+    doc = nlp(job_description)
+    
+    # Extract single-word keywords
+    single_word_keywords = [token.text.lower() for token in doc if token.is_alpha and not token.is_stop]
+
+    # Extract multi-word keywords (noun chunks)
+    multi_word_keywords = [chunk.text.lower() for chunk in doc.noun_chunks]
+
+    return single_word_keywords, multi_word_keywords
+
 def analyse_resume(resume_text, job_description):
-    job_keywords = nlp(job_description)
-    must_have_keywords = [token.text.lower() for token in job_keywords if token.is_alpha and not token.is_stop]
-    nice_to_have_keywords = ["HTML", "CSS", "critical thinking"]
+    single_word_keywords, multi_word_keywords = extract_keywords(job_description)
+    
+    # Check matches for single and multi-word keywords
+    matched_single_words = [word for word in single_word_keywords if word in resume_text.lower()]
+    matched_multi_words = [phrase for phrase in multi_word_keywords if phrase in resume_text.lower()]
+    
+    missing_single_words = list(set(single_word_keywords) - set(matched_single_words))
+    missing_multi_words = list(set(multi_word_keywords) - set(matched_multi_words))
 
-    matched_must_have = [word for word in must_have_keywords if word.lower() in resume_text.lower()]
-    matched_nice_to_have = [word for word in nice_to_have_keywords if word.lower() in resume_text.lower()]
+    # Calculate scores
+    single_word_score = (len(matched_single_words) / len(single_word_keywords)) * 50 if single_word_keywords else 0
+    multi_word_score = (len(matched_multi_words) / len(multi_word_keywords)) * 50 if multi_word_keywords else 0
 
-    must_have_score = (len(matched_must_have) / len(must_have_keywords)) * 70 if must_have_keywords else 0
-    nice_to_have_score = (len(matched_nice_to_have) / len(nice_to_have_keywords)) * 30 if nice_to_have_keywords else 0
-
-    total_score = must_have_score + nice_to_have_score
+    total_score = single_word_score + multi_word_score
 
     return {
-        "matched_must_have": matched_must_have,
-        "missing_must_have": list(set(must_have_keywords) - set(matched_must_have)),
-        "matched_nice_to_have": matched_nice_to_have,
+        "matched_single_words": matched_single_words,
+        "missing_single_words": missing_single_words,
+        "matched_multi_words": matched_multi_words,
+        "missing_multi_words": missing_multi_words,
         "total_score": round(total_score, 2)
     }
 
 def suggest_rewritten_resume(resume_text, job_description):
-    job_keywords = nlp(job_description)
-    must_have_keywords = [token.text.lower() for token in job_keywords if token.is_alpha and not token.is_stop]
-    missing_keywords = list(set(must_have_keywords) - set(word.lower() for word in resume_text.split()))
+    _, multi_word_keywords = extract_keywords(job_description)
+    missing_multi_words = [phrase for phrase in multi_word_keywords if phrase not in resume_text.lower()]
     
-    # Rewriting suggestion
+    # Generate suggestions
     suggestions = []
-    for keyword in missing_keywords:
-        suggestions.append(f"Consider adding a sentence using '{keyword}' to highlight your experience related to it.")
+    for phrase in missing_multi_words:
+        suggestions.append(f"Consider adding a sentence to showcase your expertise in '{phrase}'.")
 
     rewritten_resume = resume_text
-    if missing_keywords:
+    if missing_multi_words:
         rewritten_resume += "\n\nSuggested Additions:\n"
         for suggestion in suggestions:
             rewritten_resume += f"- {suggestion}\n"
