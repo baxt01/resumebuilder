@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resume Analysis</title>
+    <title>Resume Analysis Tool</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
 </head>
 <body>
@@ -28,66 +28,50 @@
         <div id="results" class="mt-5" style="display: none;">
             <h2>Analysis Results</h2>
             <div id="keywordResults"></div>
-            <div id="formattingIssues"></div>
+            <div id="rewrittenResume"></div>
         </div>
-    </div>
-
-    <script>
-        const form = document.getElementById('analysisForm');
-        const resultsDiv = document.getElementById('results');
-        const keywordResultsDiv = document.getElementById('keywordResults');
-        const formattingIssuesDiv = document.getElementById('formattingIssues');
-
-        form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData(form);
-    const response = await fetch('/analyse', {
-        method: 'POST',
-        body: formData
-    });
-
-    if (response.ok) {
-        const data = await response.json();
-
-        // Display keyword results
-        keywordResultsDiv.innerHTML = `
-            <h3>Keyword Matching</h3>
-            <p><strong>Matched Must-Have Keywords:</strong> ${data.matched_must_have.join(', ')}</p>
-            <p><strong>Matched Nice-to-Have Keywords:</strong> ${data.matched_nice_to_have.join(', ')}</p>
-            <p><strong>Total ATS Score:</strong> ${data.total_score}%</p>
-        `;
-
-        // Display action verbs
-        keywordResultsDiv.innerHTML += `
-            <h3>Action Verbs</h3>
-            <p><strong>Matched Action Verbs:</strong> ${data.matched_verbs.join(', ')}</p>
-        `;
-
-        // Display formatting issues
-        formattingIssuesDiv.innerHTML = `
-            <h3>Formatting Issues</h3>
-            <ul>${data.formatting_issues.map(issue => `<li>${issue}</li>`).join('')}</ul>
-        `;
-
-        // Display readability
-        formattingIssuesDiv.innerHTML += `
-            <h3>Readability Score</h3>
-            <p><strong>Flesch Reading Ease:</strong> ${data.readability_score}</p>
-        `;
-
-        // Display tips
-        formattingIssuesDiv.innerHTML += `
-            <h3>Customisation Tips</h3>
-            <ul>${data.tips.map(tip => `<li>${tip}</li>`).join('')}</ul>
-        `;
-
-        resultsDiv.style.display = 'block';
-    } else {
-        alert('An error occurred while analysing the resume. Please try again.');
-    }
-});
-
-    </script>
+        
+        <script>
+            const form = document.getElementById('analysisForm');
+            const resultsDiv = document.getElementById('results');
+            const keywordResultsDiv = document.getElementById('keywordResults');
+            const rewrittenResumeDiv = document.getElementById('rewrittenResume');
+        
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+        
+                const formData = new FormData(form);
+                const response = await fetch('/analyse', {
+                    method: 'POST',
+                    body: formData
+                });
+        
+                if (response.ok) {
+                    const data = await response.json();
+        
+                    // Display keyword results
+                    const keywordResults = data.keyword_results;
+                    keywordResultsDiv.innerHTML = `
+                        <h3>Keyword Matching</h3>
+                        <p><strong>Matched Single-Word Keywords:</strong> ${keywordResults.matched_single_words.join(', ')}</p>
+                        <p><strong>Missing Single-Word Keywords:</strong> ${keywordResults.missing_single_words.join(', ')}</p>
+                        <p><strong>Matched Multi-Word Phrases:</strong> ${keywordResults.matched_multi_words.join(', ')}</p>
+                        <p><strong>Missing Multi-Word Phrases:</strong> ${keywordResults.missing_multi_words.join(', ')}</p>
+                        <p><strong>Score:</strong> ${keywordResults.total_score}%</p>
+                    `;
+        
+                    // Display rewritten resume
+                    const rewrittenResume = data.rewritten_resume;
+                    rewrittenResumeDiv.innerHTML = `
+                        <h3>Rewritten Resume Suggestions</h3>
+                        <pre style="background: #f8f9fa; padding: 10px;">${rewrittenResume}</pre>
+                    `;
+        
+                    resultsDiv.style.display = 'block';
+                } else {
+                    alert('An error occurred while analysing the resume. Please try again.');
+                }
+            });
+        </script>        
 </body>
 </html>
