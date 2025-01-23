@@ -27,51 +27,79 @@
 
         <div id="results" class="mt-5" style="display: none;">
             <h2>Analysis Results</h2>
-            <div id="keywordResults"></div>
-            <div id="rewrittenResume"></div>
+
+            <div id="keywordResults">
+                <h3>Keyword Matching</h3>
+                <p><strong>Matched Keywords:</strong> <span id="matchedKeywords">None</span></p>
+                <p><strong>Matched Key Phrases:</strong> <span id="matchedPhrases">None</span></p>
+            </div>
+
+            <div id="skillsResults">
+                <h3>Skills & Qualifications</h3>
+                <p><strong>Matched Skills:</strong> <span id="matchedSkills">None</span></p>
+                <p><strong>Matched Qualifications:</strong> <span id="matchedQualifications">None</span></p>
+            </div>
+
+            <div id="scoreResults">
+                <h3>Overall Score</h3>
+                <p><strong>Total Score:</strong> <span id="totalScore">0%</span></p>
+            </div>
+
+            <div id="suggestedEdits">
+                <h3>Suggested Edits</h3>
+                <ul id="suggestionList"></ul>
+            </div>
         </div>
-        
-        <script>
-            const form = document.getElementById('analysisForm');
-            const resultsDiv = document.getElementById('results');
-            const keywordResultsDiv = document.getElementById('keywordResults');
-            const rewrittenResumeDiv = document.getElementById('rewrittenResume');
-        
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-        
-                const formData = new FormData(form);
-                const response = await fetch('/analyse', {
-                    method: 'POST',
-                    body: formData
-                });
-        
-                if (response.ok) {
-                    const data = await response.json();
-        
-                    // Display keyword results
-                    const keywordResults = data.keyword_results;
-                    keywordResultsDiv.innerHTML = `
-                        <h3>Keyword Matching</h3>
-                        <p><strong>Matched Single-Word Keywords:</strong> ${keywordResults.matched_single_words.join(', ')}</p>
-                        <p><strong>Missing Single-Word Keywords:</strong> ${keywordResults.missing_single_words.join(', ')}</p>
-                        <p><strong>Matched Multi-Word Phrases:</strong> ${keywordResults.matched_multi_words.join(', ')}</p>
-                        <p><strong>Missing Multi-Word Phrases:</strong> ${keywordResults.missing_multi_words.join(', ')}</p>
-                        <p><strong>Score:</strong> ${keywordResults.total_score}%</p>
-                    `;
-        
-                    // Display rewritten resume
-                    const rewrittenResume = data.rewritten_resume;
-                    rewrittenResumeDiv.innerHTML = `
-                        <h3>Rewritten Resume Suggestions</h3>
-                        <pre style="background: #f8f9fa; padding: 10px;">${rewrittenResume}</pre>
-                    `;
-        
-                    resultsDiv.style.display = 'block';
-                } else {
-                    alert('An error occurred while analysing the resume. Please try again.');
-                }
+    </div>
+
+    <script>
+        const form = document.getElementById('analysisForm');
+        const resultsDiv = document.getElementById('results');
+        const matchedKeywordsSpan = document.getElementById('matchedKeywords');
+        const matchedPhrasesSpan = document.getElementById('matchedPhrases');
+        const matchedSkillsSpan = document.getElementById('matchedSkills');
+        const matchedQualificationsSpan = document.getElementById('matchedQualifications');
+        const totalScoreSpan = document.getElementById('totalScore');
+        const suggestionList = document.getElementById('suggestionList');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+            const response = await fetch('/analyse', {
+                method: 'POST',
+                body: formData
             });
-        </script>        
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Display results
+                matchedKeywordsSpan.textContent = data.matched_keywords.join(', ') || 'None';
+                matchedPhrasesSpan.textContent = data.matched_phrases.join(', ') || 'None';
+                matchedSkillsSpan.textContent = data.matched_skills.join(', ') || 'None';
+                matchedQualificationsSpan.textContent = data.matched_qualifications.join(', ') || 'None';
+                totalScoreSpan.textContent = `${data.total_score}%`;
+
+                // Display suggestions
+                suggestionList.innerHTML = '';
+                if (data.suggestions.length > 0) {
+                    data.suggestions.forEach(suggestion => {
+                        const li = document.createElement('li');
+                        li.textContent = suggestion;
+                        suggestionList.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = 'No suggestions available!';
+                    suggestionList.appendChild(li);
+                }
+
+                resultsDiv.style.display = 'block';
+            } else {
+                alert('An error occurred while analysing the resume. Please try again.');
+            }
+        });
+    </script>
 </body>
 </html>
