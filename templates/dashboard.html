@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Dashboard</h1>
+        <p>Welcome, {{ current_user.email }}</p>
+        <p>Your account type: <strong>{{ account_type }}</strong></p>
+
+        {% if account_type == 'free' %}
+            <form method="POST" action="{{ url_for('upgrade') }}">
+                <button type="submit" class="btn btn-success">Upgrade to Premium</button>
+            </form>
+        {% else %}
+            <p>You are already a premium user!</p>
+        {% endif %}
+
+        <a href="{{ url_for('logout') }}" class="btn btn-danger mt-3">Logout</a>
+    </div>
+</body>
+</html>
