@@ -3,103 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resume Analysis Tool</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <title>Resume Analysis</title>
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="text-center">Resume Analysis Tool</h1>
-        <p class="text-center">Upload your resume and paste the job description to analyse compliance with ATS and job requirements.</p>
-
-        <form id="analysisForm" action="/analyse" method="POST" enctype="multipart/form-data">
-            <div class="mb-3">
-                <label for="resume" class="form-label">Upload Resume (PDF or DOCX):</label>
-                <input type="file" class="form-control" id="resume" name="resume" accept=".pdf, .docx" required>
-            </div>
-
-            <div class="mb-3">
-                <label for="job_description" class="form-label">Paste Job Description:</label>
-                <textarea class="form-control" id="job_description" name="job_description" rows="5" required></textarea>
-            </div>
-
-            <button type="submit" class="btn btn-primary w-100">Analyse Resume</button>
-        </form>
-
-        <div id="results" class="mt-5" style="display: none;">
-            <h2>Analysis Results</h2>
-
-            <div id="keywordResults">
-                <h3>Keyword Matching</h3>
-                <p><strong>Matched Keywords:</strong> <span id="matchedKeywords">None</span></p>
-                <p><strong>Matched Key Phrases:</strong> <span id="matchedPhrases">None</span></p>
-            </div>
-
-            <div id="skillsResults">
-                <h3>Skills & Qualifications</h3>
-                <p><strong>Matched Skills:</strong> <span id="matchedSkills">None</span></p>
-                <p><strong>Matched Qualifications:</strong> <span id="matchedQualifications">None</span></p>
-            </div>
-
-            <div id="scoreResults">
-                <h3>Overall Score</h3>
-                <p><strong>Total Score:</strong> <span id="totalScore">0%</span></p>
-            </div>
-
-            <div id="suggestedEdits">
-                <h3>Suggested Edits</h3>
-                <ul id="suggestionList"></ul>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const form = document.getElementById('analysisForm');
-        const resultsDiv = document.getElementById('results');
-        const matchedKeywordsSpan = document.getElementById('matchedKeywords');
-        const matchedPhrasesSpan = document.getElementById('matchedPhrases');
-        const matchedSkillsSpan = document.getElementById('matchedSkills');
-        const matchedQualificationsSpan = document.getElementById('matchedQualifications');
-        const totalScoreSpan = document.getElementById('totalScore');
-        const suggestionList = document.getElementById('suggestionList');
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const formData = new FormData(form);
-            const response = await fetch('/analyse', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-
-                // Display results
-                matchedKeywordsSpan.textContent = data.matched_keywords.join(', ') || 'None';
-                matchedPhrasesSpan.textContent = data.matched_phrases.join(', ') || 'None';
-                matchedSkillsSpan.textContent = data.matched_skills.join(', ') || 'None';
-                matchedQualificationsSpan.textContent = data.matched_qualifications.join(', ') || 'None';
-                totalScoreSpan.textContent = `${data.total_score}%`;
-
-                // Display suggestions
-                suggestionList.innerHTML = '';
-                if (data.suggestions.length > 0) {
-                    data.suggestions.forEach(suggestion => {
-                        const li = document.createElement('li');
-                        li.textContent = suggestion;
-                        suggestionList.appendChild(li);
-                    });
-                } else {
-                    const li = document.createElement('li');
-                    li.textContent = 'No suggestions available!';
-                    suggestionList.appendChild(li);
-                }
-
-                resultsDiv.style.display = 'block';
-            } else {
-                alert('An error occurred while analysing the resume. Please try again.');
-            }
-        });
-    </script>
+    <h1>Welcome to Resume Analysis</h1>
+    <p>Please log in or register to use the tool.</p>
+    <a href="/login">Login</a>
+    <a href="/register">Register</a>
 </body>
 </html>
